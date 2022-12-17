@@ -1,4 +1,4 @@
-import data from "/data_1.json" assert { type: "json" };
+import data from "https://inmorpher.github.io/wethercanvas/data_1.json" assert { type: "json" };
 
 const wetherPrecipitationCanvas = (canvasId, data) => {
   //Canvas data

@@ -1,11 +1,10 @@
-import data from "https://inmorpher.github.io/wethercanvas/data_1.json" assert { type: "json" };
-
 const wetherPrecipitationCanvas = (canvasId, data) => {
   //Canvas data
   let canvas = null;
   let ctx = null;
   let precipitationLevels = null;
   let distance = null;
+  let rectangleProps = [];
   //Canvas functions
 
   //Canvas initialization
@@ -21,11 +20,11 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
     ctx = canvas.getContext("2d");
 
     //Define canvas dimensions
-    canvas.width = 460 * 4;
-    canvas.height = 250 * 4;
+    canvas.width = 460 * 2;
+    canvas.height = 250 * 2;
 
     //Canvas text props
-    ctx.font = "60px Poppins light";
+    ctx.font = "30px Poppins light";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -95,7 +94,7 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
         level: 7.6,
         color: "#03045e",
         title: "Heavy rain",
-        values: dataValuesFilter(data, 7.6),
+        values: dataValuesFilter(data, 7.5),
         min() {
           return dataMinMax(this.values, "min");
         },
@@ -106,14 +105,38 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
     };
   };
 
+  const rectangleDataInit = () => {
+    rectangleProps = [];
+    const rectWidth = 10;
+    const contentGap = 3;
+    const contentWidth = (rectWidth + contentGap) * data.length;
+    const startPoint = (canvas.width - contentWidth) / 2;
+    data.forEach((item, index) => {
+      const rectHeight = index % 15 === 0 ? 200 : 100;
+      const newCx = (rectWidth + contentGap) * index;
+      const cX = startPoint + newCx + 4;
+      const rectY = canvas.height / 2;
+      const cY = rectY - rectHeight / 2;
+
+      const coordinates = {
+        x: cX,
+        Y: cY,
+        W: rectWidth,
+        H: rectHeight,
+        precipitation: item.precipitation,
+        date: item.dt,
+      };
+      rectangleProps.push(coordinates);
+    });
+  };
+
   //Draw canvas content
   const drawCanvasContent = () => {
-    data.forEach((item, index) => {
-      const rectH = index % 15 === 0 ? 500 : 300;
+    rectangleProps.forEach((item, index) => {
       ctx.beginPath();
-      const cX = (index + 2.5) * distance;
-      const cY = canvas.height / 2;
-      ctx.roundRect(cX, cY - rectH / 2, 20, rectH, 50);
+      ctx.moveTo(item.x, item.Y);
+      ctx.lineWidth = 1;
+      ctx.roundRect(item.x, item.Y, item.W, item.H, 20);
       ctx.strokeStyle = "#fff";
       ctx.fillStyle = rectColorDef(item.precipitation);
       ctx.stroke();
@@ -126,13 +149,16 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
     if (value === precipitationLevels.noPrecipitation.level) {
       return precipitationLevels.noPrecipitation.color;
     } else if (
-      value <= precipitationLevels.lightRain.level &&
-      value < precipitationLevels.moderateRain.level
+      value > precipitationLevels.noPrecipitation.level &&
+      value <= precipitationLevels.lightRain.level
     ) {
       return precipitationLevels.lightRain.color;
-    } else if (value < precipitationLevels.moderateRain.level) {
+    } else if (
+      value > precipitationLevels.lightRain.level &&
+      value <= precipitationLevels.moderateRain.level
+    ) {
       return precipitationLevels.moderateRain.color;
-    } else if (value > precipitationLevels.heavyRain.level) {
+    } else if (value >= precipitationLevels.moderateRain.level) {
       return precipitationLevels.heavyRain.color;
     }
   };
@@ -156,12 +182,12 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
   const drawTimeline = () => {
     data.forEach((item, index) => {
       const timeStamp = index === 0 ? "now" : `${index}min`;
-      const cX = (index + 2.5) * distance;
+      const cX = (index + 5.5) * distance;
       if (index % 15 === 0) {
         ctx.beginPath();
         ctx.fillStyle = "#d5d5d5";
-        ctx.fillText(timeStamp, cX, 140);
-        ctx.beginPath();
+        ctx.font = "30px Poppins light";
+        ctx.fillText(timeStamp, cX, 120);
         ctx.fillStyle = "#000";
         ctx.fillText(timeDef(item.dt), cX, 60);
       }
@@ -171,13 +197,15 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
   //Drawing legend
   const drawLegend = () => {
     ctx.beginPath();
-    ctx.roundRect(0, canvas.height - 220, canvas.width, 100, 20);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 1;
+    ctx.roundRect(1, canvas.height - 120, canvas.width - 2, 50, 20);
     const colorGrad = ctx.createLinearGradient(0, 110, canvas.width, 0);
     colorGrad.addColorStop(0, precipitationLevels.noPrecipitation.color);
     colorGrad.addColorStop(0.25, precipitationLevels.lightRain.color);
     colorGrad.addColorStop(0.5, precipitationLevels.moderateRain.color);
     colorGrad.addColorStop(1, precipitationLevels.heavyRain.color);
-    ctx.strokeStyle = "#fff";
+
     ctx.fillStyle = colorGrad;
     ctx.stroke();
     ctx.fill();
@@ -189,7 +217,7 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
     Object.values(precipitationLevels).forEach((item, index) => {
       const posXRatio = canvas.width / precipitationLevelsLength;
       const rectSideSizeX = canvas.width / precipitationLevelsLength;
-      const rectSideSizeY = 80;
+      const rectSideSizeY = 20;
       const posX = posXRatio * index;
       const posY = canvas.height * 0.8;
 
@@ -207,9 +235,8 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
       if (!item.values.length && item.level === 7.6)
         precipitationScale = `>7.6mm/h`;
 
-      ctx.beginPath();
-      ctx.fillStyle = "#fff";
-      ctx.font = "45px Poppins light";
+      ctx.fillStyle = "white";
+      ctx.font = "22px Poppins light";
       ctx.fillText(
         precipitationScale,
         posX + rectSideSizeX / 2,
@@ -222,6 +249,80 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
   const initCanvas = () => {
     canvasInit();
     dataInit();
+    rectangleDataInit();
+  };
+
+  //Mouse move handler
+  const mouseMoveHandler = () => {
+    canvas.addEventListener("mousemove", (event) => {
+      const canvasCoordinates = canvas.getBoundingClientRect();
+      const mousePosX = (event.clientX - canvasCoordinates.left) * 2;
+      const mousePosY = (event.clientY - canvasCoordinates.top) * 2;
+      // console.log(mousePosX);
+      // rectangleDataInit();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawCanvas();
+      rectangleProps.forEach((item, index) => {
+        const gapSize = 1.6;
+
+        if (
+          mousePosX > item.x - gapSize &&
+          mousePosX < item.x + item.W + gapSize &&
+          mousePosY >= item.Y &&
+          mousePosY <= item.Y + item.H
+        ) {
+          ctx.beginPath();
+          ctx.fillStyle = rectColorDef(item.precipitation);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = "#fff";
+          ctx.moveTo(mousePosX, item.Y);
+          ctx.bezierCurveTo(
+            mousePosX - 10,
+            item.Y - 20,
+            mousePosX - 40,
+            item.Y - 10,
+            mousePosX - 40,
+            item.Y - 30
+          );
+          ctx.lineTo(mousePosX - 40, item.Y - 60);
+          ctx.quadraticCurveTo(
+            mousePosX - 40,
+            item.Y - 80,
+            mousePosX,
+            item.Y - 80
+          );
+          ctx.quadraticCurveTo(
+            mousePosX + 40,
+            item.Y - 80,
+            mousePosX + 40,
+            item.Y - 60
+          );
+          ctx.lineTo(mousePosX + 40, item.Y - 30);
+          ctx.bezierCurveTo(
+            mousePosX + 40,
+            item.Y - 10,
+            mousePosX + 10,
+            item.Y - 20,
+            mousePosX,
+            item.Y
+          );
+
+          ctx.closePath();
+
+          ctx.stroke();
+          ctx.fill();
+          ctx.fillStyle = "#fff";
+          ctx.font = "18px Poppins light";
+
+          ctx.fillText(item.precipitation.toFixed("2"), mousePosX, item.Y - 42);
+          ctx.font = "14px Poppins light";
+          ctx.fillText("mm/h", mousePosX, item.Y - 25);
+          ctx.fillStyle = "#d5d5d5";
+          ctx.fillText(timeDef(item.date), mousePosX, item.Y - 63);
+          timeDef;
+        }
+      });
+    });
   };
 
   //Draw canvas func
@@ -236,6 +337,7 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
   const start = () => {
     initCanvas();
     drawCanvas();
+    mouseMoveHandler();
   };
 
   console.time();
@@ -243,4 +345,6 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
   console.timeEnd();
 };
 
-wetherPrecipitationCanvas("canvas", data);
+fetch("https://inmorpher.github.io/wethercanvas/data_1.json")
+  .then((response) => response.json())
+  .then((data) => wetherPrecipitationCanvas("canvas", data));

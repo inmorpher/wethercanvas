@@ -180,16 +180,16 @@ const wetherPrecipitationCanvas = (canvasId, data) => {
 
   //Drawing timeline
   const drawTimeline = () => {
-    data.forEach((item, index) => {
+    rectangleProps.forEach((item, index) => {
       const timeStamp = index === 0 ? "now" : `${index}min`;
-      const cX = (index + 5.5) * distance;
+      // const cX = (index + 5.5) * distance;
       if (index % 15 === 0) {
         ctx.beginPath();
         ctx.fillStyle = "#d5d5d5";
         ctx.font = "30px Poppins light";
-        ctx.fillText(timeStamp, cX, 120);
+        ctx.fillText(timeStamp, item.x, 120);
         ctx.fillStyle = "#000";
-        ctx.fillText(timeDef(item.dt), cX, 60);
+        ctx.fillText(timeDef(item.date), item.x, 60);
       }
     });
   };
